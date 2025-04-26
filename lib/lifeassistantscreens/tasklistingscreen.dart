@@ -36,6 +36,89 @@ class _TaskListScreenState extends State<TaskListScreen> {
     _fetchTasks();
   }
 
+  void _markAsComplete(String taskId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    await _dbRef.child(user.uid).child(taskId).update({'status': 'completed'});
+    _fetchTasks();
+  }
+
+  void _editTask(Map<String, dynamic> task) {
+    final TextEditingController _controller = TextEditingController(
+      text: task['taskInput'] ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Task'),
+            content: TextField(
+              controller: _controller,
+              decoration: const InputDecoration(hintText: 'Enter task'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newText = _controller.text.trim();
+                  if (newText.isNotEmpty) {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      await _dbRef.child(user.uid).child(task['id']).update({
+                        'taskInput': newText,
+                      });
+                      Navigator.pop(context);
+                      _fetchTasks();
+                    }
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _deleteTask(String taskId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Task'),
+            content: const Text('Are you sure you want to delete this task?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await _dbRef.child(user.uid).child(taskId).remove();
+                  Navigator.pop(context);
+                  _fetchTasks();
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
   Future<void> _fetchTasks() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -52,11 +135,24 @@ class _TaskListScreenState extends State<TaskListScreen> {
       });
     }
 
-    tempList.sort(
-      (a, b) => DateTime.parse(
-        a['createdAt'],
-      ).compareTo(DateTime.parse(b['createdAt'])),
-    );
+    tempList.sort((a, b) {
+      final aEnd = a['endDateTime'];
+      final bEnd = b['endDateTime'];
+
+      // Handle if one or both are null or empty
+      if ((aEnd == null || aEnd.isEmpty) && (bEnd == null || bEnd.isEmpty)) {
+        return 0; // both have no endDateTime -> keep original order
+      } else if (aEnd == null || aEnd.isEmpty) {
+        return 1; // a has no endDateTime -> a goes after b
+      } else if (bEnd == null || bEnd.isEmpty) {
+        return -1; // b has no endDateTime -> b goes after a
+      } else {
+        // Both have endDateTime -> compare them
+        final aDate = DateTime.parse(aEnd);
+        final bDate = DateTime.parse(bEnd);
+        return aDate.compareTo(bDate); // nearest first
+      }
+    });
 
     setState(() {
       _allTasks = tempList;
@@ -68,11 +164,26 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final today = DateTime(now.year, now.month, now.day);
 
     return _allTasks.where((task) {
-      final taskDate = DateTime.parse(task['createdAt']);
+      final String? endDateTime =
+          task['endDateTime']; // Assuming this could be null or empty
+      DateTime? taskDate;
+
+      // If endDateTime is not null or empty, parse the date
+      if (endDateTime != null && endDateTime.isNotEmpty) {
+        try {
+          taskDate = DateTime.parse(endDateTime);
+        } catch (e) {
+          taskDate = null; // If parsing fails, set taskDate to null
+        }
+      }
+
       bool matchesFilter = true;
       bool matchesCategory = true;
 
-      if (_selectedFilter == 'Today') {
+      final today = DateTime.now();
+
+      if (_selectedFilter == 'Today' && taskDate != null) {
+        // Only compare if taskDate is valid
         matchesFilter =
             taskDate.year == today.year &&
             taskDate.month == today.month &&
@@ -200,8 +311,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        final createdAt = DateTime.parse(task['createdAt']);
-        final formattedDate = DateFormat('dd MMM yyyy').format(createdAt);
+        final endDateTime = task['endDateTime'];
+
+        String formattedDate;
+
+        if (endDateTime != null && endDateTime.isNotEmpty) {
+          try {
+            final createdAt = DateTime.parse(endDateTime);
+            formattedDate = DateFormat('dd MMM yyyy').format(createdAt);
+          } catch (e) {
+            formattedDate = 'Invalid Date';
+          }
+        } else {
+          formattedDate = 'No Date Available';
+        }
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8),
@@ -225,7 +348,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Created: $formattedDate',
+                  'End date: $formattedDate',
                   style: const TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 2),
@@ -241,11 +364,49 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 ),
               ],
             ),
-            trailing: Icon(
-              task['status'] == 'completed'
-                  ? Icons.check_circle
-                  : Icons.circle_outlined,
-              color: task['status'] == 'completed' ? Colors.green : Colors.grey,
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'complete') {
+                  _markAsComplete(task['id']);
+                } else if (value == 'edit') {
+                  _editTask(task);
+                } else if (value == 'delete') {
+                  _deleteTask(task['id']);
+                }
+              },
+              itemBuilder:
+                  (context) => [
+                    const PopupMenuItem(
+                      value: 'complete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Mark as Complete'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete'),
+                        ],
+                      ),
+                    ),
+                  ],
             ),
           ),
         );

@@ -3,14 +3,17 @@ import 'package:lifeassistant/authentication.dart/sign_in_screen.dart';
 import 'package:lifeassistant/authentication.dart/sign_up_screen.dart';
 import 'package:lifeassistant/home.dart';
 import 'package:lifeassistant/lifeassistantscreens/addtaskscreen.dart';
+import 'package:lifeassistant/lifeassistantscreens/imagetotextscreen.dart';
+import 'package:lifeassistant/lifeassistantscreens/notification.dart';
+import 'package:lifeassistant/lifeassistantscreens/speechtotext.dart';
 import 'package:lifeassistant/mainscreen.dart';
 import 'package:lifeassistant/onboardingscreens.dart/onboarding.dart';
 
 class AppRoutes {
   static const String onboard = '/onboard';
   static const String login = '/login';
-  static const String addproductscreen = '/addproduct';
-  static const String listproductscreen = '/listproduct';
+  static const String addvoice = '/addvoicetask';
+  static const String addthroughimage = '/addimagetask';
   static const String bottombarscreen = '/btmsbar';
   static const String home = '/mainscreen';
   static const String mainnav = '/mainnav';
@@ -36,10 +39,10 @@ class AppRoutes {
       signUp: (context) => const SignUpScreen(),
       addtask: (context) => const AddTaskScreen(),
       // bottombarscreen: (context) => const BottomBarList(),
-      // addproductscreen: (context) => const AddProductScreen(),
-      // listproductscreen: (context) => const ProductListingScreen(),
+      addvoice: (context) => const VoiceToTextScreen(),
+      addthroughimage: (context) => const ImageToTextScreen(),
       // history: (context) => const OrderHistoryScreen(),
-      // notification: (context) => const NotificationsScreen(),
+      notification: (context) => const NotificationsScreen(),
       // history: (context) => const HistoryScreen(),
       // campaingn: (context) => const MainScreen(indexvalue: 1),
       // goodness: (context) => const MainScreen(indexvalue: 2),

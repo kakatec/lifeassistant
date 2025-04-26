@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:http/http.dart' as http;
+import 'package:lifeassistant/routes.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({super.key});
@@ -108,6 +109,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
+  Future<void> addTaskViaImage() async {
+    Navigator.pushNamed(context, AppRoutes.addthroughimage);
+  }
+
+  Future<void> addTaskViaVoice() async {
+    Navigator.pushNamed(context, AppRoutes.addvoice);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -142,7 +151,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 controller: _taskController,
                 decoration: InputDecoration(
                   labelText: 'Enter your task...',
-                  labelStyle: const TextStyle(color: Colors.teal),
+                  labelStyle: const TextStyle(color: Colors.black),
                   filled: true,
                   fillColor: Colors.deepPurple.shade50,
                   border: OutlineInputBorder(
@@ -158,23 +167,71 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               const SizedBox(height: 30),
               _isLoading
                   ? const CircularProgressIndicator(color: Colors.teal)
-                  : SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.save_alt),
-                      label: const Text(
-                        'Add Task',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      onPressed: addTask,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  : Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.save_alt, color: Colors.white),
+                          label: const Text(
+                            'Add Task',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                          onPressed: addTask,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.image_outlined,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Add Task via Image',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                          onPressed: addTaskViaImage,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.mic_none_outlined,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Add Task via Voice',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                          onPressed: addTaskViaVoice,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
             ],
           ),

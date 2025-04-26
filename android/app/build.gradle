@@ -27,7 +27,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
-        coreLibraryDesugaringEnabled true // ✅
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -36,6 +36,23 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.firebase:firebase-messaging:23.0.0'
+    // 🔄 Desugaring for Java 11+ features
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
+    // ✅ Firebase BoM to manage versions
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+
+    // 🔥 Add only needed Firebase services
+    implementation 'com.google.firebase:firebase-messaging'
+
+    // ✨ If you use other Firebase features (like auth, database etc.), add them here
+    // implementation 'com.google.firebase:firebase-auth'
+    // implementation 'com.google.firebase:firebase-database'
+}
+
+// ✨ This block will FORCE correct versions and avoid duplicates
+configurations.all {
+    resolutionStrategy {
+        force 'com.google.firebase:firebase-iid:21.1.0'
+    }
 }

@@ -168,8 +168,14 @@ class _CalendarTaskScreenState extends State<CalendarTaskScreen> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    icon: const Icon(Icons.date_range),
-                                    label: const Text('Change End Date'),
+                                    icon: const Icon(
+                                      Icons.date_range,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'Change End Date',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                     onPressed: () async {
                                       final pickedDate = await showDatePicker(
                                         context: context,
