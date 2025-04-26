@@ -83,6 +83,7 @@ class VerificationScreenState extends State<VerificationScreen> {
               'phone': widget.phone,
               'address': widget.address.isNotEmpty ? widget.address : '',
               'isActive': true,
+              'mood': 3,
               'fcm_token': widget.fcmtoken,
               'profilePicture': '',
               'created_at': DateTime.now().toIso8601String(),

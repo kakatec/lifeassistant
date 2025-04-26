@@ -3,8 +3,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:lifeassistant/home.dart';
 import 'package:lifeassistant/lifeassistantscreens/addtaskscreen.dart';
+import 'package:lifeassistant/lifeassistantscreens/homescreen.dart';
+import 'package:lifeassistant/lifeassistantscreens/imagetotextscreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/planner_screen.dart';
 import 'package:lifeassistant/lifeassistantscreens/tasklistingscreen.dart';
 
@@ -97,6 +98,7 @@ class MainScreenState extends State<MainScreen> {
   }
 
   // Change the selected index in IndexedStack
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -112,8 +114,12 @@ class MainScreenState extends State<MainScreen> {
               : IndexedStack(
                 index: _selectedIndex,
                 children: <Widget>[
-                  HomeScreen(),
-                  HomeScreen(),
+                  Homepage(),
+                  // VoiceToTextScreen(),
+                  ImageToTextScreen(),
+                  // TaskPlannerScreen(),
+                  // CalendarTaskManagerScreen(),
+                  // NotesSummarizerScreen(),
                   AddTaskScreen(),
                   TaskListScreen(),
                   CalendarTaskScreen(),
