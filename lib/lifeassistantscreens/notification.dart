@@ -43,9 +43,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.pop(
-              context,
-            ); // This pops the current screen off the stack
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context); // Pop the screen if possible
+            }
           },
         ),
       ),

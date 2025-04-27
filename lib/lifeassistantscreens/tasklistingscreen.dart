@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
+import 'package:lifeassistant/localdatabase.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
@@ -86,6 +87,41 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
+  void viewTask(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Task Details',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              task['taskInput'] ?? 'No Task Details Available',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _deleteTask(String taskId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -128,29 +164,35 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
     if (snapshot.exists) {
       final data = snapshot.value as Map<dynamic, dynamic>;
-      data.forEach((key, value) {
-        final task = Map<String, dynamic>.from(value);
-        task['id'] = key;
+      for (var entry in data.entries) {
+        final task = Map<String, dynamic>.from(entry.value);
+        task['id'] = entry.key;
+
+        // Sync to local database if not exists
+        bool exists = await LocalDatabase.taskExists(task['id']);
+        if (!exists) {
+          await LocalDatabase.insertTask(task);
+        }
+
         tempList.add(task);
-      });
+      }
     }
 
+    // Now sort the list
     tempList.sort((a, b) {
       final aEnd = a['endDateTime'];
       final bEnd = b['endDateTime'];
 
-      // Handle if one or both are null or empty
       if ((aEnd == null || aEnd.isEmpty) && (bEnd == null || bEnd.isEmpty)) {
-        return 0; // both have no endDateTime -> keep original order
+        return 0;
       } else if (aEnd == null || aEnd.isEmpty) {
-        return 1; // a has no endDateTime -> a goes after b
+        return 1;
       } else if (bEnd == null || bEnd.isEmpty) {
-        return -1; // b has no endDateTime -> b goes after a
+        return -1;
       } else {
-        // Both have endDateTime -> compare them
         final aDate = DateTime.parse(aEnd);
         final bDate = DateTime.parse(bEnd);
-        return aDate.compareTo(bDate); // nearest first
+        return aDate.compareTo(bDate);
       }
     });
 
@@ -229,7 +271,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.teal,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
           Navigator.pushNamed(context, '/addtask');
         },
@@ -326,87 +368,175 @@ class _TaskListScreenState extends State<TaskListScreen> {
           formattedDate = 'No Date Available';
         }
 
+        IconData getCategoryIcon(String? category) {
+          switch (category) {
+            case 'academic':
+              return Icons.school;
+            case 'personal':
+              return Icons.person;
+            case 'work':
+              return Icons.work;
+            case 'health':
+              return Icons.favorite;
+            case 'social':
+              return Icons.group;
+            case 'other':
+            default:
+              return Icons.category;
+          }
+        }
+
         return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          elevation: 3,
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          elevation: 5,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            title: Text(
-              task['taskInput'] ?? '',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 4),
-                Text(
-                  'Category: ${task['category'] ?? 'N/A'}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'End date: $formattedDate',
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Status: ${task['status']}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color:
-                        task['status'] == 'completed'
-                            ? Colors.green
-                            : Colors.redAccent,
+                // Category Icon
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    getCategoryIcon(task['category']),
+                    color: Colors.blueAccent,
+                    size: 28,
                   ),
                 ),
+                const SizedBox(width: 12),
+
+                // Main content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Task Name
+                      Text(
+                        task['taskInput'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Status and End Date Row
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  (task['status'] == 'completed')
+                                      ? Colors.green.shade100
+                                      : Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              task['status'] ?? '',
+                              style: TextStyle(
+                                color:
+                                    (task['status'] == 'completed')
+                                        ? Colors.green
+                                        : Colors.redAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              formattedDate,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3 dot menu
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'complete') {
+                      _markAsComplete(task['id']);
+                    } else if (value == 'edit') {
+                      _editTask(task);
+                    } else if (value == 'view') {
+                      viewTask(task);
+                    } else if (value == 'delete') {
+                      _deleteTask(task['id']);
+                    }
+                  },
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'complete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.check, color: Colors.green),
+                              SizedBox(width: 8),
+                              Text('Mark as Complete'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('Edit'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.remove_red_eye, color: Colors.purple),
+                              SizedBox(width: 8),
+                              Text('View'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Delete'),
+                            ],
+                          ),
+                        ),
+                      ],
+                ),
               ],
-            ),
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'complete') {
-                  _markAsComplete(task['id']);
-                } else if (value == 'edit') {
-                  _editTask(task);
-                } else if (value == 'delete') {
-                  _deleteTask(task['id']);
-                }
-              },
-              itemBuilder:
-                  (context) => [
-                    const PopupMenuItem(
-                      value: 'complete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text('Mark as Complete'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, color: Colors.blue),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Delete'),
-                        ],
-                      ),
-                    ),
-                  ],
             ),
           ),
         );

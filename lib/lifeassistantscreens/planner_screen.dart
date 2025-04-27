@@ -64,27 +64,77 @@ class _CalendarTaskScreenState extends State<CalendarTaskScreen> {
 
     if (_selectedView == 'Day') {
       return _allTasks.where((task) {
-        final createdAt = DateTime.parse(task['createdAt']);
-        return createdAt.year == now.year &&
-            createdAt.month == now.month &&
-            createdAt.day == now.day;
+        final endDateTime = task['endDateTime'];
+        if (endDateTime == null || endDateTime.isEmpty) return false;
+        try {
+          final createdAt = DateTime.parse(endDateTime);
+          return createdAt.year == now.year &&
+              createdAt.month == now.month &&
+              createdAt.day == now.day;
+        } catch (e) {
+          return false; // invalid date
+        }
       }).toList();
     } else if (_selectedView == 'Week') {
-      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      final endOfWeek = startOfWeek.add(const Duration(days: 6));
-      return _allTasks.where((task) {
-        final createdAt = DateTime.parse(task['createdAt']);
-        return createdAt.isAfter(
-              startOfWeek.subtract(const Duration(seconds: 1)),
-            ) &&
-            createdAt.isBefore(endOfWeek.add(const Duration(days: 1)));
-      }).toList();
+      final startOfRange = now.subtract(const Duration(days: 2));
+      final endOfRange = now.add(const Duration(days: 4));
+
+      final weekTasks =
+          _allTasks.where((task) {
+            final endDateTime = task['endDateTime'];
+            if (endDateTime == null || endDateTime.isEmpty) return false;
+            try {
+              final createdAt = DateTime.parse(endDateTime);
+              return createdAt.isAfter(
+                    startOfRange.subtract(const Duration(seconds: 1)),
+                  ) &&
+                  createdAt.isBefore(endOfRange.add(const Duration(days: 1)));
+            } catch (e) {
+              return false;
+            }
+          }).toList();
+
+      // Sort by endDateTime ascending
+      weekTasks.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(a['endDateTime'] ?? '') ?? DateTime(9999);
+        final bDate =
+            DateTime.tryParse(b['endDateTime'] ?? '') ?? DateTime(9999);
+        return aDate.compareTo(bDate);
+      });
+
+      return weekTasks;
     } else {
       // Month
-      return _allTasks.where((task) {
-        final createdAt = DateTime.parse(task['createdAt']);
-        return createdAt.year == now.year && createdAt.month == now.month;
-      }).toList();
+      final startOfRange = now.subtract(const Duration(days: 15));
+      final endOfRange = now.add(const Duration(days: 15));
+
+      final monthTasks =
+          _allTasks.where((task) {
+            final endDateTime = task['endDateTime'];
+            if (endDateTime == null || endDateTime.isEmpty)
+              return true; // if no date, include
+            try {
+              final createdAt = DateTime.parse(endDateTime);
+              return createdAt.isAfter(
+                    startOfRange.subtract(const Duration(seconds: 1)),
+                  ) &&
+                  createdAt.isBefore(endOfRange.add(const Duration(days: 1)));
+            } catch (e) {
+              return true; // invalid date, still include
+            }
+          }).toList();
+
+      // Sort by endDateTime ascending
+      monthTasks.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(a['endDateTime'] ?? '') ?? DateTime(9999);
+        final bDate =
+            DateTime.tryParse(b['endDateTime'] ?? '') ?? DateTime(9999);
+        return aDate.compareTo(bDate);
+      });
+
+      return monthTasks;
     }
   }
 
@@ -181,9 +231,11 @@ class _CalendarTaskScreenState extends State<CalendarTaskScreen> {
                                         context: context,
                                         initialDate:
                                             endDateTime ?? DateTime.now(),
-                                        firstDate: DateTime(2020),
+                                        firstDate:
+                                            DateTime.now(), // 👉 Start from today
                                         lastDate: DateTime(2100),
                                       );
+
                                       if (pickedDate != null) {
                                         await _updateEndDate(
                                           task['id'],
