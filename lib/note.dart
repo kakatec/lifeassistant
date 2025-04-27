@@ -103,7 +103,7 @@ class _NoteAppState extends State<NoteApp> {
                       trailing: IconButton(
                         icon: Icon(Icons.delete),
                         onPressed: () async {
-                          await DatabaseHelper.instance.deleteNote(note.id!);
+                          // await DatabaseHelper.instance.deleteNote(note.id!);
                           _refreshData();
                         },
                       ),

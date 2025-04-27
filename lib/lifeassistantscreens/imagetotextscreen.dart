@@ -187,7 +187,18 @@ class _ImageToTextScreenState extends State<ImageToTextScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Image to Task'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Image to Task'),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context); // Pop the screen if possible
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: GestureDetector(
           onTap:

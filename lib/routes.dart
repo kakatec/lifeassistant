@@ -6,6 +6,7 @@ import 'package:lifeassistant/lifeassistantscreens/addtaskscreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/imagetotextscreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/notification.dart';
 import 'package:lifeassistant/lifeassistantscreens/speechtotext.dart';
+import 'package:lifeassistant/lifeassistantscreens/summarizescreen.dart';
 import 'package:lifeassistant/mainscreen.dart';
 import 'package:lifeassistant/onboardingscreens.dart/onboarding.dart';
 
@@ -41,7 +42,7 @@ class AppRoutes {
       // bottombarscreen: (context) => const BottomBarList(),
       addvoice: (context) => const VoiceToTextScreen(),
       addthroughimage: (context) => const ImageToTextScreen(),
-      // history: (context) => const OrderHistoryScreen(),
+      history: (context) => const NotesSummarizerScreen(),
       notification: (context) => const NotificationsScreen(),
       // history: (context) => const HistoryScreen(),
       // campaingn: (context) => const MainScreen(indexvalue: 1),

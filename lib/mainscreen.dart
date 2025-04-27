@@ -7,6 +7,7 @@ import 'package:lifeassistant/lifeassistantscreens/addtaskscreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/homescreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/imagetotextscreen.dart';
 import 'package:lifeassistant/lifeassistantscreens/planner_screen.dart';
+import 'package:lifeassistant/lifeassistantscreens/profile.dart';
 import 'package:lifeassistant/lifeassistantscreens/tasklistingscreen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -116,13 +117,13 @@ class MainScreenState extends State<MainScreen> {
                 children: <Widget>[
                   Homepage(),
                   // VoiceToTextScreen(),
-                  ImageToTextScreen(),
+                  CalendarTaskScreen(),
                   // TaskPlannerScreen(),
                   // CalendarTaskManagerScreen(),
                   // NotesSummarizerScreen(),
                   AddTaskScreen(),
                   TaskListScreen(),
-                  CalendarTaskScreen(),
+                  ProfileScreen(),
                 ],
               ),
       bottomNavigationBar: BottomNavigationBar(
@@ -133,11 +134,12 @@ class MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              Icons.schedule,
+              Icons.event,
+              // Icons.schedule,
               // Icons.business_outlined,
               size: 40.0,
             ),
-            label: 'campaign ',
+            label: 'Schedule',
           ),
           BottomNavigationBarItem(
             icon: Icon(
@@ -149,7 +151,7 @@ class MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.note_alt_outlined, size: 40.0),
-            label: 'Goodness',
+            label: 'Tasks',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outlined, size: 40.0),

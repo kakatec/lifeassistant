@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
 import 'package:lifeassistant/consts.dart';
-import 'package:lifeassistant/routes.dart'; // For date formatting
+import 'package:lifeassistant/routes.dart';
+import 'package:lifeassistant/userdb.dart'; // For date formatting
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -43,6 +44,15 @@ class _HomepageState extends State<Homepage> {
       final snapshot = await databaseRef.child('users/${user!.uid}').get();
       if (snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+        // Save into SQLite
+        final dbHelper = UserDatabaseHelper();
+        await dbHelper.insertOrUpdateUser({
+          'id': user!.uid,
+          'name': data['name'] ?? 'User',
+          'mood': data['mood'] ?? 3,
+        });
+
         setState(() {
           mood = data['mood'] ?? 3;
           username = data['name'] ?? 'User';
@@ -66,6 +76,12 @@ class _HomepageState extends State<Homepage> {
         List<Map<dynamic, dynamic>> filteredTasks =
             allTasks.where((task) {
               String category = (task['category'] ?? '').toLowerCase();
+              String status = (task['status'] ?? '').toLowerCase();
+
+              if (status != 'pending') {
+                return false; // Only keep tasks with status 'pending'
+              }
+
               if (mood <= 2) {
                 return category == 'social' || category == 'health';
               } else if (mood == 3) {
@@ -260,80 +276,159 @@ class _HomepageState extends State<Homepage> {
                               final task = tasks[index];
                               final String taskStatus =
                                   task['status'] ?? 'pending';
+                              final String category =
+                                  task['category'] ?? 'other';
+
                               return Card(
-                                margin: EdgeInsets.symmetric(vertical: 8),
+                                margin: EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 8,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                elevation: 3,
-                                child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
+                                elevation: 4,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
                                     vertical: 12,
                                   ),
-                                  title: Text(
-                                    task['taskInput'] ?? '',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  subtitle: Column(
+                                  child: Row(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        CrossAxisAlignment.center,
                                     children: [
-                                      SizedBox(height: 4),
-                                      Text(
-                                        formatDateTime(
-                                          task['endDateTime'] ?? '',
-                                        ),
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
+                                      // Category Icon
                                       Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
+                                        padding: EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: getStatusColor(
-                                            taskStatus,
-                                          ).withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
                                         ),
-                                        child: Text(
-                                          taskStatus.toUpperCase(),
-                                          style: TextStyle(
-                                            color: getStatusColor(taskStatus),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
+                                        child: getCategoryIcon(category),
+                                      ),
+                                      SizedBox(width: 12),
+
+                                      // Task Name and Status
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              task['taskInput'] ?? '',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                                color: Colors.black,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: getStatusColor(
+                                                      taskStatus,
+                                                    ).withOpacity(0.15),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    taskStatus.toUpperCase(),
+                                                    style: TextStyle(
+                                                      color: getStatusColor(
+                                                        taskStatus,
+                                                      ),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  trailing: PopupMenuButton<String>(
-                                    onSelected: (value) {
-                                      updateTaskStatus(task['key'], value);
-                                    },
-                                    itemBuilder:
-                                        (context) => [
-                                          PopupMenuItem(
-                                            value: 'pending',
-                                            child: Text('Mark as Pending'),
+
+                                      // End date and 3 dots
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          PopupMenuButton<String>(
+                                            onSelected: (value) {
+                                              if (value == 'view') {
+                                                showDialog(
+                                                  context: context,
+                                                  builder:
+                                                      (context) => AlertDialog(
+                                                        title: Text(
+                                                          'Task Details',
+                                                        ),
+                                                        content: Text(
+                                                          task['taskInput'] ??
+                                                              'No details available.',
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed:
+                                                                () =>
+                                                                    Navigator.of(
+                                                                      context,
+                                                                    ).pop(),
+                                                            child: Text(
+                                                              'Close',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                );
+                                              } else if (value == 'completed') {
+                                                updateTaskStatus(
+                                                  task['key'],
+                                                  value,
+                                                );
+                                              }
+                                            },
+                                            itemBuilder:
+                                                (context) => [
+                                                  PopupMenuItem(
+                                                    value: 'view',
+                                                    child: Text('View Task'),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'completed',
+                                                    child: Text(
+                                                      'Mark as Complete',
+                                                    ),
+                                                  ),
+                                                ],
+                                            icon: Icon(
+                                              Icons.more_vert,
+                                              size: 24,
+                                            ),
                                           ),
-                                          PopupMenuItem(
-                                            value: 'completed',
-                                            child: Text('Mark as Complete'),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            formatDateTime(
+                                              task['endDateTime'] ?? '',
+                                            ),
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ],
-                                    child: Icon(Icons.more_vert),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
@@ -344,5 +439,23 @@ class _HomepageState extends State<Homepage> {
                 ),
       ),
     );
+  }
+
+  Widget getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'academic':
+        return Icon(Icons.school, color: Colors.deepPurple, size: 28);
+      case 'personal':
+        return Icon(Icons.person, color: Colors.blue, size: 28);
+      case 'work':
+        return Icon(Icons.work, color: Colors.teal, size: 28);
+      case 'health':
+        return Icon(Icons.favorite, color: Colors.red, size: 28);
+      case 'social':
+        return Icon(Icons.group, color: Colors.orange, size: 28);
+      case 'other':
+      default:
+        return Icon(Icons.category, color: Colors.grey, size: 28);
+    }
   }
 }
